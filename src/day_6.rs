@@ -1,4 +1,5 @@
-pub fn part_1() {
+#[test]
+fn part_1() {
     fn parse_nums<'a>(line: &'a str) -> impl Iterator<Item = usize> + 'a {
         let (_, numstr) = line.split_once(':').unwrap();
         numstr
@@ -7,21 +8,21 @@ pub fn part_1() {
             .map(|s| s.parse::<usize>().unwrap())
     }
     let mut lines = _INPUT.trim().lines();
-    println!(
-        "Wins: {}",
-        parse_nums(lines.next().unwrap())
-            .zip(parse_nums(lines.next().unwrap()))
-            .map(|(time, distance)| {
-                (0..time)
-                    .map(|t| (time - t) * t)
-                    .filter(|d| *d > distance)
-                    .count()
-            })
-            .product::<usize>()
-    );
+    let answer = parse_nums(lines.next().unwrap())
+        .zip(parse_nums(lines.next().unwrap()))
+        .map(|(time, distance)| {
+            (0..time)
+                .map(|t| (time - t) * t)
+                .filter(|d| *d > distance)
+                .count()
+        })
+        .product::<usize>();
+    println!("Wins: {}", answer);
+    assert_eq!(1312850, answer);
 }
 
-pub fn part_2() {
+#[test]
+fn part_2() {
     fn parse_digits(line: &str) -> usize {
         let (_, numstr) = line.split_once(':').unwrap();
         numstr
@@ -29,15 +30,20 @@ pub fn part_2() {
             .split_whitespace()
             .collect::<Vec<_>>()
             .join("")
-            .parse::<usize>().unwrap()
+            .parse::<usize>()
+            .unwrap()
     }
     let mut lines = _INPUT.trim().lines();
     let time = parse_digits(lines.next().unwrap()) as f64;
     let distance = parse_digits(lines.next().unwrap()) as f64;
     let disc = (time * time) - (4. * distance);
-    println!("Wins: {}", if disc < 0. {0} else {
+    let answer = if disc < 0. {
+        0
+    } else {
         f64::floor(f64::sqrt(disc)) as usize
-    });
+    };
+    println!("Wins: {}", answer);
+    assert_eq!(36749103, answer);
 }
 
 const _EXAMPLE: &str = "Time:      7  15   30
