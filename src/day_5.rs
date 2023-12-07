@@ -51,53 +51,71 @@ fn part_1() {
 #[test]
 fn part_2() {
     let mut lines = _INPUT.trim().lines().filter(|ln| !ln.is_empty());
-    let seedranges: Vec<usize> = lines
+    let seedranges: Vec<_> = lines
         .next()
         .unwrap()
         .split_once(':')
         .unwrap()
         .1
         .split_whitespace()
-        .map(|numstr| numstr.parse().unwrap())
+        .map(|numstr| numstr.parse::<i64>().unwrap())
         .collect();
-    assert!(seedranges.len() % 2 == 0);
-    let lines: Vec<_> = lines.collect();
-    let maps: Vec<_> = lines
-        .split(|ln| ln.ends_with(" map:"))
-        .map(|maplines| {
-            maplines
-                .iter()
-                .map(|ln| {
-                    let (dst, rest) = ln.split_once(' ').unwrap();
-                    let (src, len) = rest.split_once(' ').unwrap();
-                    (
-                        src.parse().unwrap(),
-                        dst.parse().unwrap(),
-                        len.parse().unwrap(),
-                    )
-                })
-                .collect::<Vec<(usize, usize, usize)>>()
-        })
-        .collect();
-    let minloc = seedranges
+    assert_eq!(seedranges.len() % 2, 0);
+    let mut ping: Vec<_> = seedranges
         .chunks(2)
-        .map(|c| (c[0]..(c[0] + c[1])))
-        .flatten()
-        .map(|seed| {
-            maps.iter().fold(seed, |acc, map| {
-                match map
-                    .iter()
-                    .find(|(src, _dst, len)| acc >= *src && acc < *src + *len)
-                {
-                    Some((src, dst, _len)) => *dst + (acc - *src),
-                    None => acc,
+        .map(|c| (c[0], (c[1] + c[0])))
+        .collect();
+    let mut pong: Vec<(i64, i64)> = Vec::new();
+    let mut maping: Vec<(i64, i64)> = Vec::new();
+    let mut mapong: Vec<(i64, i64)> = Vec::new();
+    let lines = lines.collect::<Vec<_>>();
+    fn is_valid((start, end): (i64, i64)) -> bool {
+        start > 0 && end > start
+    }
+    for maplines in lines.split(|l| l.ends_with(" map:")) {
+        maping.clear();
+        maping.extend(ping.iter());
+        pong.clear();
+        for line in maplines {
+            let (src_lower, src_upper, shift) = {
+                let (dst, rest) = line.split_once(' ').unwrap();
+                let (src, len) = rest.split_once(' ').unwrap();
+                let src = src.parse::<i64>().unwrap();
+                let dst = dst.parse::<i64>().unwrap();
+                let len = len.parse::<i64>().unwrap();
+                (src, src + len, dst - src)
+            };
+            mapong.clear();
+            for &(start, end) in maping.iter() {
+                if !is_valid((start, end)) {
+                    continue;
                 }
-            })
-        })
-        .min()
-        .unwrap();
+                let range = (start, i64::min(end, src_lower));
+                if is_valid(range) {
+                    mapong.push(range);
+                }
+                let range = (
+                    i64::max(start, src_lower) + shift,
+                    i64::min(end, src_upper) + shift,
+                );
+                if is_valid(range) {
+                    pong.push(range);
+                }
+                let range = (i64::max(start, src_upper), end);
+                if is_valid(range) {
+                    mapong.push(range);
+                }
+            }
+            maping.clear();
+            maping.extend(mapong.iter());
+        }
+        pong.extend(maping.iter());
+        ping.clear();
+        ping.extend(pong.iter());
+    }
+    let minloc = ping.iter().map(|(start, _end)| *start).min().unwrap();
+    println!("{}", minloc);
     assert_eq!(minloc, 1928058);
-    println!("Min: {}", minloc);
 }
 
 const _EXAMPLE: &str = "seeds: 79 14 55 13
