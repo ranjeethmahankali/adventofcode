@@ -1,74 +1,217 @@
-#[test]
-fn part_1() {
+/*
+--- Day 4: Scratchcards ---
+
+The gondola takes you up. Strangely, though, the ground doesn't seem
+to be coming with you; you're not climbing a mountain. As the circle
+of Snow Island recedes below you, an entire new landmass suddenly
+appears above you! The gondola carries you to the surface of the new
+island and lurches into the station.
+
+As you exit the gondola, the first thing you notice is that the air
+here is much warmer than it was on Snow Island. It's also quite
+humid. Is this where the water source is?
+
+The next thing you notice is an Elf sitting on the floor across the
+station in what seems to be a pile of colorful square cards.
+
+"Oh! Hello!" The Elf excitedly runs over to you. "How may I be of
+service?" You ask about water sources.
+
+"I'm not sure; I just operate the gondola lift. That does sound like
+something we'd have, though - this is Island Island, after all! I bet
+the gardener would know. He's on a different island, though - er, the
+small kind surrounded by water, not the floating kind. We really need
+to come up with a better naming scheme. Tell you what: if you can help
+me with something quick, I'll let you borrow my boat and you can go
+visit the gardener. I got all these scratchcards as a gift, but I
+can't figure out what I've won."
+
+The Elf leads you over to the pile of colorful cards. There, you
+discover dozens of scratchcards, all with their opaque covering
+already scratched off. Picking one up, it looks like each card has two
+lists of numbers separated by a vertical bar (|): a list of winning
+numbers and then a list of numbers you have. You organize the
+information into a table (your puzzle input).
+
+As far as the Elf has been able to figure out, you have to figure out
+which of the numbers you have appear in the list of winning
+numbers. The first match makes the card worth one point and each match
+after the first doubles the point value of that card.
+
+For example:
+
+Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
+Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
+Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
+Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
+Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
+
+In the above example, card 1 has five winning numbers (41, 48, 83, 86,
+and 17) and eight numbers you have (83, 86, 6, 31, 17, 9, 48, and
+53). Of the numbers you have, four of them (48, 83, 17, and 86) are
+winning numbers! That means card 1 is worth 8 points (1 for the first
+match, then doubled three times for each of the three matches after
+the first).
+
+Card 2 has two winning numbers (32 and 61), so it is worth 2 points.
+
+Card 3 has two winning numbers (1 and 21), so it is worth 2 points.
+
+Card 4 has one winning number (84), so it is worth 1 point.
+
+Card 5 has no winning numbers, so it is worth no points.
+
+Card 6 has no winning numbers, so it is worth no points.
+
+So, in this example, the Elf's pile of scratchcards is worth 13
+points.
+
+Take a seat in the large pile of colorful cards. How many points are
+they worth in total?
+
+--- Part Two ---
+
+Just as you're about to report your findings to the Elf, one of you
+realizes that the rules have actually been printed on the back of
+every card this whole time.
+
+There's no such thing as "points". Instead, scratchcards only cause
+you to win more scratchcards equal to the number of winning numbers
+you have.
+
+Specifically, you win copies of the scratchcards below the winning
+card equal to the number of matches. So, if card 10 were to have 5
+matching numbers, you would win one copy each of cards 11, 12, 13, 14,
+and 15.
+
+Copies of scratchcards are scored like normal scratchcards and have
+the same card number as the card they copied. So, if you win a copy of
+card 10 and it has 5 matching numbers, it would then win a copy of the
+same cards that the original card 10 won: cards 11, 12, 13, 14, and
+15. This process repeats until none of the copies cause you to win any
+more cards. (Cards will never make you copy a card past the end of the
+table.)
+
+This time, the above example goes differently:
+
+Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
+Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
+Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
+Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
+Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
+
+Card 1 has four matching numbers, so you win one copy each of the next
+four cards: cards 2, 3, 4, and 5.
+
+Your original card 2 has two matching numbers, so you win one copy
+each of cards 3 and 4.
+
+Your copy of card 2 also wins one copy each of cards 3 and 4.
+
+Your four instances of card 3 (one original and three copies) have two
+matching numbers, so you win four copies each of cards 4 and 5.
+
+Your eight instances of card 4 (one original and seven copies) have
+one matching number, so you win eight copies of card 5.
+
+Your fourteen instances of card 5 (one original and thirteen copies)
+have no matching numbers and win no more cards.
+
+Your one instance of card 6 (one original) has no matching numbers and
+wins no more cards.
+
+Once all of the originals and copies have been processed, you end up
+with 1 instance of card 1, 2 instances of card 2, 4 instances of card
+3, 8 instances of card 4, 14 instances of card 5, and 1 instance of
+card 6. In total, this example pile of scratchcards causes you to
+ultimately have 30 scratchcards!
+
+Process all of the original and copied scratchcards until no more
+scratchcards are won. Including the original set of scratchcards, how
+many total scratchcards do you end up with?
+
+ */
+#[cfg(test)]
+mod test {
     use std::collections::HashSet;
-    let input = _INPUT.trim();
-    let total = input
-        .split('\n')
-        .map(|line| {
+
+    fn part_1(input: &str) -> usize {
+        input
+            .trim()
+            .lines()
+            .map(|line| {
+                let (_cardnumstr, numstr) = line.split_once(": ").unwrap();
+                let (winningstr, numstr) = numstr.split_once(" | ").unwrap();
+                let winning: HashSet<usize> = HashSet::from_iter(
+                    winningstr
+                        .split_whitespace()
+                        .map(|nstr| nstr.parse::<usize>().unwrap()),
+                );
+                let nums: HashSet<usize> = HashSet::from_iter(
+                    numstr
+                        .split_whitespace()
+                        .map(|nstr| nstr.parse::<usize>().unwrap()),
+                );
+                let hits = nums.intersection(&winning).count();
+                if hits == 0 {
+                    0
+                } else {
+                    usize::pow(2usize, (hits - 1) as u32)
+                }
+            })
+            .sum::<usize>()
+    }
+
+    fn part_2(input: &str) -> usize {
+        let mut cards: Vec<_> = input.trim().lines().map(|l| (1, l)).collect();
+        let mut total = 0usize;
+        let mut idx = 0usize;
+        while idx < cards.len() {
+            let (count, line) = cards[idx];
+            total += count;
             let (_cardnumstr, numstr) = line.split_once(": ").unwrap();
             let (winningstr, numstr) = numstr.split_once(" | ").unwrap();
-            let winning: HashSet<usize> = HashSet::from_iter(
+            let hits = HashSet::<usize>::from_iter(
                 winningstr
                     .split_whitespace()
                     .map(|nstr| nstr.parse::<usize>().unwrap()),
-            );
-            let nums: HashSet<usize> = HashSet::from_iter(
+            )
+            .intersection(&HashSet::from_iter(
                 numstr
                     .split_whitespace()
                     .map(|nstr| nstr.parse::<usize>().unwrap()),
-            );
-            let hits = nums.intersection(&winning).count();
-            if hits == 0 {
-                0
-            } else {
-                usize::pow(2usize, (hits - 1) as u32)
+            ))
+            .count();
+            for i in 0..hits {
+                cards[idx + i + 1].0 += count;
             }
-        })
-        .sum::<usize>();
-    assert_eq!(total, 24175);
-    println!("Total: {}", total);
-}
-
-#[test]
-fn part_2() {
-    use std::collections::HashSet;
-    let input = _INPUT.trim();
-    let mut cards: Vec<_> = input.split('\n').map(|l| (1, l)).collect();
-    let mut total = 0usize;
-    let mut idx = 0usize;
-    while idx < cards.len() {
-        let (count, line) = cards[idx];
-        total += count;
-        let (_cardnumstr, numstr) = line.split_once(": ").unwrap();
-        let (winningstr, numstr) = numstr.split_once(" | ").unwrap();
-        let hits = HashSet::<usize>::from_iter(
-            winningstr
-                .split_whitespace()
-                .map(|nstr| nstr.parse::<usize>().unwrap()),
-        )
-        .intersection(&HashSet::from_iter(
-            numstr
-                .split_whitespace()
-                .map(|nstr| nstr.parse::<usize>().unwrap()),
-        ))
-        .count();
-        for i in 0..hits {
-            cards[idx + i + 1].0 += count;
+            idx += 1;
         }
-        idx += 1;
+        return total;
     }
-    assert_eq!(total, 18846301);
-    println!("Total: {}", total);
-}
 
-const _EXAMPLE: &str = "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
+    #[test]
+    fn t_part_1() {
+        assert_eq!(part_1(EXAMPLE), 13);
+        assert_eq!(part_1(INPUT), 24175);
+    }
+
+    #[test]
+    fn t_part_2() {
+        assert_eq!(part_2(INPUT), 18846301);
+        assert_eq!(part_2(EXAMPLE), 30);
+    }
+
+    const EXAMPLE: &str = "Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53
 Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19
 Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1
 Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83
 Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36
 Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11";
 
-const _INPUT: &str = "Card   1: 69 24 51 87  9 49 17 16 21 48 |  5 52 86 35 57 18 60 84 50 76 96 47 38 41 34 36 55 20 25 37  6 70 66 45  3
+    const INPUT: &str = "Card   1: 69 24 51 87  9 49 17 16 21 48 |  5 52 86 35 57 18 60 84 50 76 96 47 38 41 34 36 55 20 25 37  6 70 66 45  3
 Card   2: 59 63 94  2 95 30 57 69 85  7 | 95 44 84 30 92 21 74  9 99 49 24 23  8 68  7 63 45 28 96  2 69 77 93 59 85
 Card   3: 90 28  1 14 41 83 24 59 55  6 | 29 15 72 47 32 96 73 76 52 20 53 26 78 39 85 92  3 67 51 75 64 54 99 65 22
 Card   4: 88 86 30  6 50 32 66 89 81 93 | 99 93 68 37 13 56 66 88 78 89 81 69  6 50 53 86 45 34 32 38 36 84 49 30 35
@@ -283,3 +426,4 @@ Card 212: 95 63 96 50 55 64 62 11 66  1 | 17 28 19 53 76 38 90 94 31 87 32  6 27
 Card 213: 44 62 67 29 17 65 45 35 48 51 | 21 54 20  8  3 49 55 85 91 58 59 27 37 35 28 83 92 90  1 81 47 73 69 33  2
 Card 214: 96  3 24 46 13 64 86  8  2 92 | 97 54 53 88 12 17 61 21  7 40 79 16 39 25 69  9 50 56 91 31 32 90 19 37 33
 ";
+}

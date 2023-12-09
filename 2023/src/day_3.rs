@@ -1,170 +1,286 @@
-#[test]
-fn part_1() {
-    let input = _INPUT.trim();
-    let cols = {
-        let (line, _) = input.split_once('\n').unwrap();
-        line.len()
-    };
-    let input: Vec<_> = input
-        .as_bytes()
-        .iter()
-        .filter_map(|&b| if b != b'\n' { Some(b) } else { None })
-        .collect();
-    let mut flags = vec![false; input.len()];
-    for (i, &ch) in input.iter().enumerate() {
-        if !ch.is_ascii_digit() && ch != b'.' {
+/*
+--- Day 3: Gear Ratios ---
+
+You and the Elf eventually reach a gondola lift station; he says the
+gondola lift will take you up to the water source, but this is as far
+as he can bring you. You go inside.
+
+It doesn't take long to find the gondolas, but there seems to be a
+problem: they're not moving.
+
+"Aaah!"
+
+You turn around to see a slightly-greasy Elf with a wrench and a look
+of surprise. "Sorry, I wasn't expecting anyone! The gondola lift isn't
+working right now; it'll still be a while before I can fix it." You
+offer to help.
+
+The engineer explains that an engine part seems to be missing from the
+engine, but nobody can figure out which one. If you can add up all the
+part numbers in the engine schematic, it should be easy to work out
+which part is missing.
+
+The engine schematic (your puzzle input) consists of a visual
+representation of the engine. There are lots of numbers and symbols
+you don't really understand, but apparently any number adjacent to a
+symbol, even diagonally, is a "part number" and should be included in
+your sum. (Periods (.) do not count as a symbol.)
+
+Here is an example engine schematic:
+
+467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..
+
+In this schematic, two numbers are not part numbers because they are
+not adjacent to a symbol: 114 (top right) and 58 (middle right). Every
+other number is adjacent to a symbol and so is a part number; their
+sum is 4361.
+
+Of course, the actual engine schematic is much larger. What is the sum
+of all of the part numbers in the engine schematic?
+
+--- Part Two ---
+
+The engineer finds the missing part and installs it in the engine! As
+the engine springs to life, you jump in the closest gondola, finally
+ready to ascend to the water source.
+
+You don't seem to be going very fast, though. Maybe something is still
+wrong? Fortunately, the gondola has a phone labeled "help", so you
+pick it up and the engineer answers.
+
+Before you can explain the situation, she suggests that you look out
+the window. There stands the engineer, holding a phone in one hand and
+waving with the other. You're going so slowly that you haven't even
+left the station. You exit the gondola.
+
+The missing part wasn't the only issue - one of the gears in the
+engine is wrong. A gear is any * symbol that is adjacent to exactly
+two part numbers. Its gear ratio is the result of multiplying those
+two numbers together.
+
+This time, you need to find the gear ratio of every gear and add them
+all up so that the engineer can figure out which gear needs to be
+replaced.
+
+Consider the same engine schematic again:
+
+467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..
+
+In this schematic, there are two gears. The first is in the top left;
+it has part numbers 467 and 35, so its gear ratio is 16345. The second
+gear is in the lower right; its gear ratio is 451490. (The * adjacent
+to 617 is not a gear because it is only adjacent to one part number.)
+Adding up all of the gear ratios produces 467835.
+
+What is the sum of all of the gear ratios in your engine schematic?
+ */
+
+#[cfg(test)]
+mod test {
+    fn part_1(input: &str) -> usize {
+        let input = input.trim();
+        let cols = {
+            let (line, _) = input.split_once('\n').unwrap();
+            line.len()
+        };
+        let input: Vec<_> = input
+            .as_bytes()
+            .iter()
+            .filter_map(|&b| if b != b'\n' { Some(b) } else { None })
+            .collect();
+        let mut flags = vec![false; input.len()];
+        for (i, &ch) in input.iter().enumerate() {
+            if !ch.is_ascii_digit() && ch != b'.' {
+                let col = i % cols;
+                flags[i] = true;
+                if col > 0 {
+                    flags[i - 1] = true;
+                }
+                if col < cols - 1 {
+                    flags[i + 1] = true;
+                }
+                if i > cols {
+                    let i = i - cols;
+                    flags[i] = true;
+                    if col > 0 {
+                        flags[i - 1] = true;
+                    }
+                    if col < cols - 1 {
+                        flags[i + 1] = true;
+                    }
+                }
+                if i + cols < input.len() {
+                    let i = i + cols;
+                    flags[i] = true;
+                    if col > 0 {
+                        flags[i - 1] = true;
+                    }
+                    if col < cols - 1 {
+                        flags[i + 1] = true;
+                    }
+                }
+            }
+        }
+        let mut total = 0usize;
+        let mut start = 0;
+        let mut isnum = false;
+        for (i, ch) in input.iter().enumerate() {
+            if ch.is_ascii_digit() {
+                if !isnum {
+                    isnum = true;
+                    start = i;
+                }
+            } else if isnum {
+                isnum = false;
+                if (start..i).any(|j| flags[j]) {
+                    total += String::from_utf8(input[start..i].to_vec())
+                        .unwrap()
+                        .parse::<usize>()
+                        .unwrap();
+                }
+            }
+        }
+        return total;
+    }
+
+    fn part_2(input: &str) -> usize {
+        fn get_nbs(i: usize, cols: usize, arrlen: usize, dst: &mut Vec<usize>) {
+            dst.clear();
             let col = i % cols;
-            flags[i] = true;
+            dst.push(i);
             if col > 0 {
-                flags[i - 1] = true;
+                dst.push(i - 1);
             }
             if col < cols - 1 {
-                flags[i + 1] = true;
+                dst.push(i + 1);
             }
             if i > cols {
                 let i = i - cols;
-                flags[i] = true;
+                dst.push(i);
                 if col > 0 {
-                    flags[i - 1] = true;
+                    dst.push(i - 1);
                 }
                 if col < cols - 1 {
-                    flags[i + 1] = true;
+                    dst.push(i + 1);
                 }
             }
-            if i + cols < input.len() {
+            if i + cols < arrlen {
                 let i = i + cols;
-                flags[i] = true;
+                dst.push(i);
                 if col > 0 {
-                    flags[i - 1] = true;
+                    dst.push(i - 1);
                 }
                 if col < cols - 1 {
-                    flags[i + 1] = true;
+                    dst.push(i + 1);
                 }
             }
         }
-    }
-    let mut total = 0usize;
-    let mut start = 0;
-    let mut isnum = false;
-    for (i, ch) in input.iter().enumerate() {
-        if ch.is_ascii_digit() {
-            if !isnum {
-                isnum = true;
-                start = i;
-            }
-        } else if isnum {
-            isnum = false;
-            if (start..i).any(|j| flags[j]) {
-                total += String::from_utf8(input[start..i].to_vec())
-                    .unwrap()
-                    .parse::<usize>()
-                    .unwrap();
-            }
-        }
-    }
-    assert_eq!(total, 553079);
-    println!("Total: {}", total);
-}
-
-#[test]
-fn part_2() {
-    fn get_nbs(i: usize, cols: usize, arrlen: usize, dst: &mut Vec<usize>) {
-        dst.clear();
-        let col = i % cols;
-        dst.push(i);
-        if col > 0 {
-            dst.push(i - 1);
-        }
-        if col < cols - 1 {
-            dst.push(i + 1);
-        }
-        if i > cols {
-            let i = i - cols;
-            dst.push(i);
-            if col > 0 {
-                dst.push(i - 1);
-            }
-            if col < cols - 1 {
-                dst.push(i + 1);
-            }
-        }
-        if i + cols < arrlen {
-            let i = i + cols;
-            dst.push(i);
-            if col > 0 {
-                dst.push(i - 1);
-            }
-            if col < cols - 1 {
-                dst.push(i + 1);
-            }
-        }
-    }
-
-    let input = _INPUT.trim();
-    let cols = {
-        let (line, _) = input.split_once('\n').unwrap();
-        line.len()
-    };
-    let input: Vec<_> = input
-        .as_bytes()
-        .iter()
-        .filter_map(|&b| if b != b'\n' { Some(b) } else { None })
-        .collect();
-    let mut flags = vec![false; input.len()];
-    let mut nbs: Vec<usize> = Vec::new();
-    for (i, &ch) in input.iter().enumerate() {
-        if !ch.is_ascii_digit() && ch != b'.' {
-            get_nbs(i, cols, input.len(), &mut nbs);
-            for nb in nbs.iter() {
-                flags[*nb] = true;
-            }
-        }
-    }
-    let mut start = 0;
-    let mut isnum = false;
-    let mut nums: Vec<usize> = Vec::new();
-    let mut numflags = vec![None; input.len()];
-    let mut flags2 = vec![false; input.len()];
-    for (i, ch) in input.iter().enumerate() {
-        if ch.is_ascii_digit() {
-            if !isnum {
-                isnum = true;
-                start = i;
-            }
-        } else if isnum {
-            isnum = false;
-            if (start..i).any(|j| flags[j]) {
-                let num: usize = String::from_utf8(input[start..i].to_vec())
-                    .unwrap()
-                    .parse()
-                    .unwrap();
-                for j in start..i {
-                    numflags[j] = Some(nums.len());
-                    flags2[j] = true;
+        let input = input.trim();
+        let cols = {
+            let (line, _) = input.split_once('\n').unwrap();
+            line.len()
+        };
+        let input: Vec<_> = input
+            .as_bytes()
+            .iter()
+            .filter_map(|&b| if b != b'\n' { Some(b) } else { None })
+            .collect();
+        let mut flags = vec![false; input.len()];
+        let mut nbs: Vec<usize> = Vec::new();
+        for (i, &ch) in input.iter().enumerate() {
+            if !ch.is_ascii_digit() && ch != b'.' {
+                get_nbs(i, cols, input.len(), &mut nbs);
+                for nb in nbs.iter() {
+                    flags[*nb] = true;
                 }
-                nums.push(num);
             }
         }
-    }
-    let mut total = 0usize;
-    let mut gears = Vec::new();
-    for (i, ch) in input.iter().enumerate() {
-        if *ch == b'*' {
-            get_nbs(i, cols, input.len(), &mut nbs);
-            gears.clear();
-            gears.extend(nbs.iter().filter_map(|n| numflags[*n]));
-            gears.sort();
-            gears.dedup();
-            if gears.len() == 2 {
-                total += nums[gears[0]] * nums[gears[1]];
+        let mut start = 0;
+        let mut isnum = false;
+        let mut nums: Vec<usize> = Vec::new();
+        let mut numflags = vec![None; input.len()];
+        let mut flags2 = vec![false; input.len()];
+        for (i, ch) in input.iter().enumerate() {
+            if ch.is_ascii_digit() {
+                if !isnum {
+                    isnum = true;
+                    start = i;
+                }
+            } else if isnum {
+                isnum = false;
+                if (start..i).any(|j| flags[j]) {
+                    let num: usize = String::from_utf8(input[start..i].to_vec())
+                        .unwrap()
+                        .parse()
+                        .unwrap();
+                    for j in start..i {
+                        numflags[j] = Some(nums.len());
+                        flags2[j] = true;
+                    }
+                    nums.push(num);
+                }
             }
         }
+        let mut total = 0usize;
+        let mut gears = Vec::new();
+        for (i, ch) in input.iter().enumerate() {
+            if *ch == b'*' {
+                get_nbs(i, cols, input.len(), &mut nbs);
+                gears.clear();
+                gears.extend(nbs.iter().filter_map(|n| numflags[*n]));
+                gears.sort();
+                gears.dedup();
+                if gears.len() == 2 {
+                    total += nums[gears[0]] * nums[gears[1]];
+                }
+            }
+        }
+        return total;
     }
-    assert_eq!(total, 84363105);
-    println!("Total: {total}");
-}
 
-const _INPUT: &str = "
+    #[test]
+    fn t_part_1() {
+        assert_eq!(part_1(EXAMPLE), 4361);
+        assert_eq!(part_1(INPUT), 553079);
+    }
+
+    #[test]
+    fn t_part_2() {
+        assert_eq!(part_2(EXAMPLE), 467835);
+        assert_eq!(part_2(INPUT), 84363105);
+    }
+
+    const EXAMPLE: &str = "
+467..114..
+...*......
+..35..633.
+......#...
+617*......
+.....+.58.
+..592.....
+......755.
+...$.*....
+.664.598..";
+
+    const INPUT: &str = "
 ...........................775.651...............887....79...946...921...493.....942..942.....151....155....................................
 ......240...................*.....-......................$..*...................*.......%.....+....................956.549.*290.......834...
 .485...+............437......906......%..608.805.725..72.....242....745..61......440................................*..*.........515...*....
@@ -306,3 +422,4 @@ const _INPUT: &str = "
 .........$....743..../.......-................+........................*990..................343......#.....*...............*....684........
 ......651.....................644....................887.812........187.................783........749...928.291...........131...........293
 ";
+}

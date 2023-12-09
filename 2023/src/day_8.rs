@@ -1,141 +1,259 @@
-#[test]
-fn part_1() {
-    use std::collections::HashMap;
-    let mut input = _INPUT.trim().lines().filter_map(|ln| {
-        let ln = ln.trim();
-        if ln.is_empty() {
-            None
-        } else {
-            Some(ln)
-        }
-    });
-    let navsteps = input
-        .next()
-        .unwrap()
-        .chars()
-        .map(|c| match c {
-            'L' => 0usize,
-            'R' => 1usize,
-            _ => panic!("Invalid direction {}", c),
-        })
-        .collect::<Vec<_>>();
-    let nav = navsteps.iter().cycle();
-    let triplets = input
-        .map(|line| {
-            let (node, rhs) = line.split_once(" = ").unwrap();
-            let (left, right) = rhs
-                .trim_matches(|c| c == '(' || c == ')')
-                .split_once(", ")
-                .unwrap();
-            (node, left, right)
-        })
-        .collect::<Vec<_>>();
-    let indexmap: HashMap<&str, usize> = HashMap::from_iter(
-        triplets
-            .iter()
-            .map(|(n, _, _)| *n)
-            .enumerate()
-            .map(|(i, n)| (n, i)),
-    );
-    let nodes = triplets
-        .iter()
-        .map(|(_, l, r)| [*indexmap.get(l).unwrap(), *indexmap.get(r).unwrap()])
-        .collect::<Vec<_>>();
-    let mut current = *indexmap.get("AAA").unwrap();
-    let end = *indexmap.get("ZZZ").unwrap();
-    let mut count = 0usize;
-    for n in nav {
-        if current == end {
-            break;
-        }
-        current = nodes[current][*n];
-        count += 1;
-    }
-    println!("Answer: {count}");
-    assert_eq!(count, 19783);
-}
+/*
+--- Day 8: Haunted Wasteland ---
 
-#[test]
-pub fn part_2() {
+You're still riding a camel across Desert Island when you spot a
+sandstorm quickly approaching. When you turn to warn the Elf, she
+disappears before your eyes! To be fair, she had just finished warning
+you about ghosts a few minutes ago.
+
+One of the camel's pouches is labeled "maps" - sure enough, it's full
+of documents (your puzzle input) about how to navigate the desert. At
+least, you're pretty sure that's what they are; one of the documents
+contains a list of left/right instructions, and the rest of the
+documents seem to describe some kind of network of labeled nodes.
+
+It seems like you're meant to use the left/right instructions to
+navigate the network. Perhaps if you have the camel follow the same
+instructions, you can escape the haunted wasteland!
+
+After examining the maps for a bit, two nodes stick out: AAA and
+ZZZ. You feel like AAA is where you are now, and you have to follow
+the left/right instructions until you reach ZZZ.
+
+This format defines each node of the network individually. For
+example:
+
+RL
+
+AAA = (BBB, CCC)
+BBB = (DDD, EEE)
+CCC = (ZZZ, GGG)
+DDD = (DDD, DDD)
+EEE = (EEE, EEE)
+GGG = (GGG, GGG)
+ZZZ = (ZZZ, ZZZ)
+
+Starting with AAA, you need to look up the next element based on the
+next left/right instruction in your input. In this example, start with
+AAA and go right (R) by choosing the right element of AAA, CCC. Then,
+L means to choose the left element of CCC, ZZZ. By following the
+left/right instructions, you reach ZZZ in 2 steps.
+
+Of course, you might not find ZZZ right away. If you run out of
+left/right instructions, repeat the whole sequence of instructions as
+necessary: RL really means RLRLRLRLRLRLRLRL... and so on. For example,
+here is a situation that takes 6 steps to reach ZZZ:
+
+LLR
+
+AAA = (BBB, BBB)
+BBB = (AAA, ZZZ)
+ZZZ = (ZZZ, ZZZ)
+
+Starting at AAA, follow the left/right instructions. How many steps
+are required to reach ZZZ?
+
+--- Part Two ---
+
+The sandstorm is upon you and you aren't any closer to escaping the
+wasteland. You had the camel follow the instructions, but you've
+barely left your starting position. It's going to take significantly
+more steps to escape!
+
+What if the map isn't for people - what if the map is for ghosts? Are
+ghosts even bound by the laws of spacetime? Only one way to find out.
+
+After examining the maps a bit longer, your attention is drawn to a
+curious fact: the number of nodes with names ending in A is equal to
+the number ending in Z! If you were a ghost, you'd probably just start
+at every node that ends with A and follow all of the paths at the same
+time until they all simultaneously end up at nodes that end with Z.
+
+For example:
+
+LR
+
+11A = (11B, XXX)
+11B = (XXX, 11Z)
+11Z = (11B, XXX)
+22A = (22B, XXX)
+22B = (22C, 22C)
+22C = (22Z, 22Z)
+22Z = (22B, 22B)
+XXX = (XXX, XXX)
+
+Here, there are two starting nodes, 11A and 22A (because they both end
+with A). As you follow each left/right instruction, use that
+instruction to simultaneously navigate away from both nodes you're
+currently on. Repeat this process until all of the nodes you're
+currently on end with Z. (If only some of the nodes you're on end with
+Z, they act like any other node and you continue as normal.) In this
+example, you would proceed as follows:
+
+Step 0: You are at 11A and 22A.
+Step 1: You choose all of the left paths, leading you to 11B and 22B.
+Step 2: You choose all of the right paths, leading you to 11Z and 22C.
+Step 3: You choose all of the left paths, leading you to 11B and 22Z.
+Step 4: You choose all of the right paths, leading you to 11Z and 22B.
+Step 5: You choose all of the left paths, leading you to 11B and 22C.
+Step 6: You choose all of the right paths, leading you to 11Z and 22Z.
+
+So, in this example, you end up entirely on nodes that end in Z after
+6 steps.
+
+Simultaneously start on every node that ends with A. How many steps
+does it take before you're only on nodes that end with Z?
+
+ */
+
+#[cfg(test)]
+mod test {
     use std::collections::HashMap;
-    let mut input = _INPUT.trim().lines().filter_map(|ln| {
-        let ln = ln.trim();
-        if ln.is_empty() {
-            None
-        } else {
-            Some(ln)
-        }
-    });
-    let navsteps = input
-        .next()
-        .unwrap()
-        .chars()
-        .map(|c| match c {
-            'L' => 0usize,
-            'R' => 1usize,
-            _ => panic!("Invalid direction {}", c),
-        })
-        .collect::<Vec<_>>();
-    let triplets = input
-        .map(|line| {
-            let (node, rhs) = line.split_once(" = ").unwrap();
-            let (left, right) = rhs
-                .trim_matches(|c| c == '(' || c == ')')
-                .split_once(", ")
-                .unwrap();
-            (node, left, right)
-        })
-        .collect::<Vec<_>>();
-    let indexmap: HashMap<&str, usize> = HashMap::from_iter(
-        triplets
-            .iter()
-            .map(|(n, _, _)| *n)
-            .enumerate()
-            .map(|(i, n)| (n, i)),
-    );
-    let nodes = triplets
-        .iter()
-        .map(|(_, l, r)| [*indexmap.get(l).unwrap(), *indexmap.get(r).unwrap()])
-        .collect::<Vec<_>>();
-    let lcm = triplets
-        .iter()
-        .filter_map(|(n, ..)| {
-            if n.ends_with('A') {
-                Some(*indexmap.get(n).unwrap())
-            } else {
+
+    fn part_1(input: &str) -> usize {
+        let mut input = input.trim().lines().filter_map(|ln| {
+            let ln = ln.trim();
+            if ln.is_empty() {
                 None
+            } else {
+                Some(ln)
             }
-        })
-        .map(|mut curr| {
-            let mut count = 0usize;
-            for n in navsteps.iter().cycle() {
-                if triplets[curr].0.ends_with('Z') {
-                    break;
-                }
-                curr = nodes[curr][*n];
-                count += 1;
-            }
-            count
-        })
-        .fold(1usize, |acc, n| {
-            let (mut min, mut max) = if acc < n { (acc, n) } else { (n, acc) };
-            let mut rem = max % min;
-            while rem != 0 {
-                // Compute GCD using Euclid algo.
-                max = rem;
-                if max < min {
-                    (min, max) = (max, min);
-                }
-                rem = max % min;
-            }
-            // min is now the gcd.
-            acc * n / min
         });
-    println!("Answer: {lcm}");
-    assert_eq!(lcm, 9177460370549);
-}
+        let navsteps = input
+            .next()
+            .unwrap()
+            .chars()
+            .map(|c| match c {
+                'L' => 0usize,
+                'R' => 1usize,
+                _ => panic!("Invalid direction {}", c),
+            })
+            .collect::<Vec<_>>();
+        let nav = navsteps.iter().cycle();
+        let triplets = input
+            .map(|line| {
+                let (node, rhs) = line.split_once(" = ").unwrap();
+                let (left, right) = rhs
+                    .trim_matches(|c| c == '(' || c == ')')
+                    .split_once(", ")
+                    .unwrap();
+                (node, left, right)
+            })
+            .collect::<Vec<_>>();
+        let indexmap: HashMap<&str, usize> = HashMap::from_iter(
+            triplets
+                .iter()
+                .map(|(n, _, _)| *n)
+                .enumerate()
+                .map(|(i, n)| (n, i)),
+        );
+        let nodes = triplets
+            .iter()
+            .map(|(_, l, r)| [*indexmap.get(l).unwrap(), *indexmap.get(r).unwrap()])
+            .collect::<Vec<_>>();
+        let mut current = *indexmap.get("AAA").unwrap();
+        let end = *indexmap.get("ZZZ").unwrap();
+        let mut count = 0usize;
+        for n in nav {
+            if current == end {
+                break;
+            }
+            current = nodes[current][*n];
+            count += 1;
+        }
+        return count;
+    }
 
-const _EXAMPLE: &str = "RL
+    fn part_2(input: &str) -> usize {
+        let mut input = input.trim().lines().filter_map(|ln| {
+            let ln = ln.trim();
+            if ln.is_empty() {
+                None
+            } else {
+                Some(ln)
+            }
+        });
+        let navsteps = input
+            .next()
+            .unwrap()
+            .chars()
+            .map(|c| match c {
+                'L' => 0usize,
+                'R' => 1usize,
+                _ => panic!("Invalid direction {}", c),
+            })
+            .collect::<Vec<_>>();
+        let triplets = input
+            .map(|line| {
+                let (node, rhs) = line.split_once(" = ").unwrap();
+                let (left, right) = rhs
+                    .trim_matches(|c| c == '(' || c == ')')
+                    .split_once(", ")
+                    .unwrap();
+                (node, left, right)
+            })
+            .collect::<Vec<_>>();
+        let indexmap: HashMap<&str, usize> = HashMap::from_iter(
+            triplets
+                .iter()
+                .map(|(n, _, _)| *n)
+                .enumerate()
+                .map(|(i, n)| (n, i)),
+        );
+        let nodes = triplets
+            .iter()
+            .map(|(_, l, r)| [*indexmap.get(l).unwrap(), *indexmap.get(r).unwrap()])
+            .collect::<Vec<_>>();
+        triplets
+            .iter()
+            .filter_map(|(n, ..)| {
+                if n.ends_with('A') {
+                    Some(*indexmap.get(n).unwrap())
+                } else {
+                    None
+                }
+            })
+            .map(|mut curr| {
+                let mut count = 0usize;
+                for n in navsteps.iter().cycle() {
+                    if triplets[curr].0.ends_with('Z') {
+                        break;
+                    }
+                    curr = nodes[curr][*n];
+                    count += 1;
+                }
+                count
+            })
+            .fold(1usize, |acc, n| {
+                let (mut min, mut max) = if acc < n { (acc, n) } else { (n, acc) };
+                let mut rem = max % min;
+                while rem != 0 {
+                    // Compute GCD using Euclid algo.
+                    max = rem;
+                    if max < min {
+                        (min, max) = (max, min);
+                    }
+                    rem = max % min;
+                }
+                // min is now the gcd.
+                acc * n / min
+            })
+    }
+
+    #[test]
+    fn t_part_1() {
+        assert_eq!(part_1(EXAMPLE), 2);
+        assert_eq!(part_1(EXAMPLE_2), 6);
+        assert_eq!(part_1(INPUT), 19783);
+    }
+
+    #[test]
+    pub fn t_part_2() {
+        assert_eq!(part_2(EXAMPLE_3), 6);
+        assert_eq!(part_2(INPUT), 9177460370549);
+    }
+
+    const EXAMPLE: &str = "RL
 
 AAA = (BBB, CCC)
 BBB = (DDD, EEE)
@@ -145,13 +263,13 @@ EEE = (EEE, EEE)
 GGG = (GGG, GGG)
 ZZZ = (ZZZ, ZZZ)";
 
-const _EXAMPLE_2: &str = "LLR
+    const EXAMPLE_2: &str = "LLR
 
 AAA = (BBB, BBB)
 BBB = (AAA, ZZZ)
 ZZZ = (ZZZ, ZZZ)";
 
-const _EXAMPLE_3: &str = "LR
+    const EXAMPLE_3: &str = "LR
 
 11A = (11B, XXX)
 11B = (XXX, 11Z)
@@ -162,7 +280,7 @@ const _EXAMPLE_3: &str = "LR
 22Z = (22B, 22B)
 XXX = (XXX, XXX)";
 
-const _INPUT: &str = "LRRLRLRRLRRRLRLRLRRLRRRLRRRLRRLRRRLRLRLRLRLRLRLRRRLRRLRRRLLLLRRRLRLLLRRRLLRLLRRRLRRRLRLRRLRRRLRRRLLRRRLRLRRRLLRRRLRLLRRRLRRLLRLRLRLRRRLRLLRLRLRRRLRLLRLRLRRRLLRRRLRRLRRRLRLRRLRLRRLRLRRLRRRLLRRRLLLRRRLLRRLRRLRRLRLLRRLRRRLRRLRLRLRRLRRLLLRRLRLRRRLRRRLRRRLLLRLRRRLLRRRLRLLRRRR
+    const INPUT: &str = "LRRLRLRRLRRRLRLRLRRLRRRLRRRLRRLRRRLRLRLRLRLRLRLRRRLRRLRRRLLLLRRRLRLLLRRRLLRLLRRRLRRRLRLRRLRRRLRRRLLRRRLRLRRRLLRRRLRLLRRRLRRLLRLRLRLRRRLRLLRLRLRRRLRLLRLRLRRRLLRRRLRRLRRRLRLRRLRLRRLRLRRLRRRLLRRRLLLRRRLLRRLRRLRRLRLLRRLRRRLRRLRLRLRRLRRLLLRRLRLRRRLRRRLRRRLLLRLRRRLLRRRLRLLRRRR
 
 NFK = (LMH, RSS)
 SLJ = (NBT, CDG)
@@ -866,3 +984,4 @@ VLD = (FGX, HVF)
 KKX = (GQT, QXD)
 KKJ = (BGQ, LFM)
 LNJ = (FNL, HMG)";
+}
