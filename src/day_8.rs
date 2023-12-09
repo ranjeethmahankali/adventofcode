@@ -97,7 +97,7 @@ pub fn part_2() {
         .iter()
         .map(|(_, l, r)| [*indexmap.get(l).unwrap(), *indexmap.get(r).unwrap()])
         .collect::<Vec<_>>();
-    let steps = triplets
+    let lcm = triplets
         .iter()
         .filter_map(|(n, ..)| {
             if n.ends_with('A') {
@@ -117,24 +117,22 @@ pub fn part_2() {
             }
             count
         })
-        .collect::<Vec<_>>();
-    let mut muls = steps.clone();
-    let answer: usize;
-    loop {
-        let max = muls.iter().max().unwrap().clone();
-        if muls.iter().all(|m| *m == max) {
-            answer = max;
-            break;
-        }
-        for i in 0..steps.len() {
-            let mul = muls.get_mut(i).unwrap();
-            while *mul < max {
-                *mul += steps[i];
+        .fold(1usize, |acc, n| {
+            let (mut min, mut max) = if acc < n { (acc, n) } else { (n, acc) };
+            let mut rem = max % min;
+            while rem != 0 {
+                // Compute GCD using Euclid algo.
+                max = rem;
+                if max < min {
+                    (min, max) = (max, min);
+                }
+                rem = max % min;
             }
-        }
-    }
-    println!("Answer: {answer}");
-    assert_eq!(answer, 9177460370549);
+            // min is now the gcd.
+            acc * n / min
+        });
+    println!("Answer: {lcm}");
+    assert_eq!(lcm, 9177460370549);
 }
 
 const _EXAMPLE: &str = "RL
