@@ -709,43 +709,11 @@ the rope visit at least once?
 #[cfg(test)]
 mod test {
 
-    fn part_1(input: &str) -> usize {
+    /// N is the length of the rope.
+    fn simulate_rope<const N: usize>(input: &str) -> usize {
         let (mut tailpos, _) = input.trim().lines().fold(
-            (Vec::<(i32, i32)>::new(), (0i32, 0i32, 0i32, 0i32)),
-            |acc, line| {
-                let (mut tailpos, (mut xh, mut yh, mut xt, mut yt)) = acc;
-                let (dir, steps) = line.split_once(' ').unwrap();
-                let steps: usize = steps.parse().unwrap();
-                let (xstep, ystep): (i32, i32) = match dir {
-                    "R" => (1, 0),
-                    "L" => (-1, 0),
-                    "U" => (0, 1),
-                    "D" => (0, -1),
-                    _ => panic!("Invalid direction"),
-                };
-                for _ in 0..steps {
-                    xh += xstep;
-                    yh += ystep;
-                    let (xd, yd) = (xh - xt, yh - yt);
-                    if i32::max(i32::abs(xd), i32::abs(yd)) > 1 {
-                        xt += i32::signum(xd);
-                        yt += i32::signum(yd);
-                    }
-                    tailpos.push((xt, yt));
-                }
-                (tailpos, (xh, yh, xt, yt))
-            },
-        );
-        tailpos.sort();
-        tailpos.dedup();
-        return tailpos.len();
-    }
-
-    fn part_2(input: &str) -> usize {
-        let (mut tailpos, _) = input.trim().lines().fold(
-            (Vec::<(i32, i32)>::new(), [(0i32, 0i32); 10]),
-            |acc, line| {
-                let (mut tailpos, mut pos) = acc;
+            (Vec::<(i32, i32)>::new(), [(0i32, 0i32); N]),
+            |(mut tailpos, mut pos), line| {
                 let (dir, steps) = line.split_once(' ').unwrap();
                 let steps: usize = steps.parse().unwrap();
                 let (xstep, ystep): (i32, i32) = match dir {
@@ -758,14 +726,14 @@ mod test {
                 for _ in 0..steps {
                     pos[0].0 += xstep;
                     pos[0].1 += ystep;
-                    for i in 1..10 {
+                    for i in 1..N {
                         let (xd, yd) = (pos[i - 1].0 - pos[i].0, pos[i - 1].1 - pos[i].1);
                         if i32::max(i32::abs(xd), i32::abs(yd)) > 1 {
                             pos[i].0 += i32::signum(xd);
                             pos[i].1 += i32::signum(yd);
                         }
                     }
-                    tailpos.push(pos[9]);
+                    tailpos.push(pos[N - 1]);
                 }
                 (tailpos, pos)
             },
@@ -773,6 +741,14 @@ mod test {
         tailpos.sort();
         tailpos.dedup();
         return tailpos.len();
+    }
+
+    fn part_1(input: &str) -> usize {
+        simulate_rope::<2>(input)
+    }
+
+    fn part_2(input: &str) -> usize {
+        simulate_rope::<10>(input)
     }
 
     #[test]
