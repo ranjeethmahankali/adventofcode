@@ -88,7 +88,7 @@ mod test {
     #[test]
     fn t_part_1() {
         assert_eq!(part_1(EXAMPLE), 21);
-        assert_eq!(part_1(INPUT), 21);
+        assert_eq!(part_1(INPUT), 7260);
     }
 
     #[test]
