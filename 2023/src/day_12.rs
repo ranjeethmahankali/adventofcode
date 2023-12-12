@@ -3,86 +3,91 @@
 #[cfg(test)]
 mod test {
     use itertools::Itertools;
+    use std::collections::HashMap;
 
-    fn check(record: &[char], groups: &[usize]) -> bool {
-        match (0..record.len()).find(|i| record[*i] == '#') {
-            Some(begin) => {
-                let end = (begin..record.len())
-                    .find(|i| record[*i] == '.')
-                    .unwrap_or(record.len());
-                let size = end - begin;
-                match groups.get(0) {
-                    Some(expected) => {
-                        if size == *expected {
-                            check(&record[end..], &groups[1..])
+    fn count<'a>(
+        record: &'a str,
+        current_run: usize,
+        runs: &'a [usize],
+        cache: &mut HashMap<(&'a str, usize, &'a [usize]), usize>,
+    ) -> usize {
+        if let Some(cached) = cache.get(&(record, current_run, runs)) {
+            return *cached;
+        }
+        let out = if runs.is_empty() {
+            if record.contains('#') {
+                return 0;
+            } else {
+                return 1;
+            }
+        } else if record.is_empty() {
+            if current_run == runs[0] && runs.len() == 1 {
+                return 1;
+            } else {
+                return 0;
+            }
+        } else if current_run > runs[0] {
+            return 0;
+        } else {
+            match record.chars().next().unwrap() {
+                '#' => count(&record[1..], current_run + 1, runs, cache),
+                '.' if current_run == runs[0] => count(&record[1..], 0, &runs[1..], cache),
+                '.' if current_run == 0 => count(&record[1..], 0, runs, cache),
+                '.' if current_run < runs[0] => 0,
+                '?' => {
+                    count(&record[1..], current_run + 1, runs, cache)
+                        + if current_run == runs[0] {
+                            count(&record[1..], 0, &runs[1..], cache)
+                        } else if current_run == 0 {
+                            count(&record[1..], 0, runs, cache)
                         } else {
-                            false
+                            0
                         }
-                    }
-                    None => false,
                 }
+                _ => panic!("Invalid"),
             }
-            None => groups.is_empty(),
-        }
-    }
-
-    fn count(record: &mut [char], pos: usize, groups: &[usize]) -> usize {
-        match (pos..record.len()).find(|i| record[*i] == '?') {
-            Some(i) => {
-                ({
-                    record[i] = '#';
-                    let out = count(record, i + 1, groups);
-                    record[i] = '?';
-                    out
-                }) + ({
-                    record[i] = '.';
-                    let out = count(record, i + 1, groups);
-                    record[i] = '?';
-                    out
-                })
-            }
-            None => {
-                if check(record, groups) {
-                    1
-                } else {
-                    0
-                }
-            }
-        }
+        };
+        cache.insert((record, current_run, runs), out);
+        return out;
     }
 
     fn part_1(input: &str) -> usize {
-        let mut sum = 0usize;
-        let mut nums: Vec<usize> = Vec::new();
-        for line in input.trim().lines() {
-            let (rec, numstr) = line.split_once(' ').unwrap();
-            nums.clear();
-            nums.extend(numstr.split(',').map(|nstr| nstr.parse::<usize>().unwrap()));
-            let mut rec = rec.chars().collect_vec();
-            let states = count(&mut rec, 0, &nums);
-            sum += states;
-        }
-        return sum;
+        input
+            .trim()
+            .lines()
+            .map(|line| {
+                let (rec, numstr) = line.split_once(' ').unwrap();
+                count(
+                    &rec,
+                    0,
+                    &numstr
+                        .split(',')
+                        .map(|nstr| nstr.parse::<usize>().unwrap())
+                        .collect_vec(),
+                    &mut HashMap::<(&str, usize, &[usize]), usize>::new(),
+                )
+            })
+            .sum()
     }
 
     fn part_2(input: &str) -> usize {
-        let mut sum = 0usize;
-        let mut nums: Vec<usize> = Vec::new();
-        for line in input.trim().lines() {
-            let (rec, numstr) = line.split_once(' ').unwrap();
-            nums.clear();
-            nums.extend(numstr.split(',').map(|nstr| nstr.parse::<usize>().unwrap()));
-            let mut charvec = Vec::<char>::with_capacity(5 * (rec.len() + 1));
-            let mut numvec = Vec::<usize>::with_capacity(5 * nums.len());
-            for _ in 0..5 {
-                charvec.extend(rec.chars());
-                charvec.push('?');
-                numvec.extend(nums.iter());
-            }
-            let states = count(&mut charvec, 0, &numvec);
-            sum += states;
-        }
-        return sum;
+        input
+            .trim()
+            .lines()
+            .map(|line| {
+                let (rec, numstr) = line.split_once(' ').unwrap();
+                count(
+                    &mut std::iter::repeat(rec).take(5).join("?"),
+                    0,
+                    &std::iter::repeat(numstr)
+                        .take(5)
+                        .map(|nums| nums.split(',').map(|nstr| nstr.parse::<usize>().unwrap()))
+                        .flatten()
+                        .collect_vec(),
+                    &mut HashMap::<(&str, usize, &[usize]), usize>::new(),
+                )
+            })
+            .sum()
     }
 
     #[test]
@@ -94,6 +99,7 @@ mod test {
     #[test]
     fn t_part_2() {
         assert_eq!(part_2(EXAMPLE), 525152);
+        assert_eq!(part_2(INPUT), 1909291258644);
     }
 
     const EXAMPLE: &str = "
