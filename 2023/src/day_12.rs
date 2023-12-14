@@ -77,7 +77,7 @@ mod test {
             .map(|line| {
                 let (rec, numstr) = line.split_once(' ').unwrap();
                 count(
-                    &mut std::iter::repeat(rec).take(5).join("?"),
+                    &std::iter::repeat(rec).take(5).join("?"),
                     0,
                     &std::iter::repeat(numstr)
                         .take(5)
