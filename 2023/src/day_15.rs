@@ -263,7 +263,7 @@ mod test {
     #[test]
     fn t_part_2() {
         assert_eq!(part_2(EXAMPLE), 145);
-        assert_eq!(part_2(INPUT), 145);
+        assert_eq!(part_2(INPUT), 263211);
     }
 
     const EXAMPLE: &str = "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7";
