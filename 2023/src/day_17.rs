@@ -98,6 +98,18 @@ mod test {
         West,
     }
 
+    impl Direction {
+        fn opposite(&self) -> Self {
+            use Direction::*;
+            match self {
+                North => South,
+                East => West,
+                South => North,
+                West => East,
+            }
+        }
+    }
+
     #[derive(PartialEq, Eq)]
     struct Node {
         pos: usize,
@@ -122,11 +134,7 @@ mod test {
         use Direction::*;
         let (tiles, rows, cols) = parse_grid(input);
         let mut open = BinaryHeap::<Node>::new();
-        let mut prev: HashMap<
-            (usize, Option<Direction>, usize),
-            (usize, Option<Direction>, usize),
-        > = HashMap::new();
-        let mut best_cost = HashMap::<usize, usize>::new();
+        let mut best_cost = HashMap::<(usize, Option<Direction>, usize), usize>::new();
         open.push(Node {
             pos: 0,
             dir: None,
@@ -146,9 +154,15 @@ mod test {
             closed.insert(key);
             if pos == tiles.len() - 1 {
                 answer = usize::min(answer, cost);
+                continue;
             }
             open.extend([North, East, South, West].iter().filter_map(|&d| {
-                if (distance > 2 && Some(d) == dir)
+                let (same_dir, opp_dir) = match dir {
+                    Some(pdir) => (pdir == d, pdir.opposite() == d),
+                    None => (true, false),
+                };
+                if (distance > 2 && same_dir)
+                    || opp_dir
                     || (d == North && pos < cols)
                     || (d == East && pos % cols == cols - 1)
                     || (d == South && pos / cols == rows - 1)
@@ -162,26 +176,18 @@ mod test {
                     South => pos + cols,
                     West => pos - 1,
                 };
-                match prev.get(&key) {
-                    Some(parent) if parent.0 == npos => return None,
-                    _ => {}
-                }
-                let ndist = match &dir {
-                    Some(dprev) if &d == dprev => distance + 1,
-                    _ => 1,
-                };
+                let ndist = 1 + if same_dir { distance } else { 0 };
                 let ndir = Some(d);
                 let nkey = (npos, ndir, ndist);
                 if closed.contains(&nkey) {
                     return None;
                 }
                 let ncost = cost + tiles[npos];
-                let found = best_cost.entry(npos).or_insert(ncost);
-                if *found > ncost {
+                let found = best_cost.entry(nkey).or_insert(usize::MAX);
+                if *found <= ncost {
                     return None;
                 }
                 *found = ncost;
-                prev.insert(nkey, key);
                 Some(Node {
                     pos: npos,
                     dir: ndir,
@@ -194,17 +200,86 @@ mod test {
     }
 
     fn part_2(input: &str) -> usize {
-        todo!();
+        use Direction::*;
+        let (tiles, rows, cols) = parse_grid(input);
+        let mut open = BinaryHeap::<Node>::new();
+        let mut best_cost = HashMap::<(usize, Option<Direction>, usize), usize>::new();
+        open.push(Node {
+            pos: 0,
+            dir: None,
+            distance: 0,
+            cost: 0,
+        });
+        let mut closed: HashSet<(usize, Option<Direction>, usize)> = HashSet::new();
+        let mut answer = usize::MAX;
+        while let Some(Node {
+            pos,
+            dir,
+            distance,
+            cost,
+        }) = open.pop()
+        {
+            let key = (pos, dir, distance);
+            closed.insert(key);
+            if pos == tiles.len() - 1 {
+                answer = usize::min(answer, cost);
+                continue;
+            }
+            open.extend([North, East, South, West].iter().filter_map(|&d| {
+                let (same_dir, opp_dir) = match dir {
+                    Some(pdir) => (pdir == d, pdir.opposite() == d),
+                    None => (true, false),
+                };
+                if (distance < 4 && !same_dir)
+                    || (distance > 9 && same_dir)
+                    || opp_dir
+                    || (d == North && pos < cols)
+                    || (d == East && pos % cols == cols - 1)
+                    || (d == South && pos / cols == rows - 1)
+                    || (d == West && pos % cols == 0)
+                {
+                    return None;
+                }
+                let npos = match d {
+                    North => pos - cols,
+                    East => pos + 1,
+                    South => pos + cols,
+                    West => pos - 1,
+                };
+                let ndist = 1 + if same_dir { distance } else { 0 };
+                let ndir = Some(d);
+                let nkey = (npos, ndir, ndist);
+                if closed.contains(&nkey) {
+                    return None;
+                }
+                let ncost = cost + tiles[npos];
+                let found = best_cost.entry(nkey).or_insert(usize::MAX);
+                if *found <= ncost {
+                    return None;
+                }
+                *found = ncost;
+                Some(Node {
+                    pos: npos,
+                    dir: ndir,
+                    distance: ndist,
+                    cost: ncost,
+                })
+            }));
+        }
+        return answer;
     }
 
     #[test]
     fn t_part_1() {
         assert_eq!(part_1(EXAMPLE), 102);
-        // assert_eq!(part_1(INPUT), 102);
+        assert_eq!(part_1(INPUT), 638);
     }
 
     #[test]
-    fn t_part_2() {}
+    fn t_part_2() {
+        assert_eq!(part_2(EXAMPLE), 94);
+        assert_eq!(part_2(INPUT), 748);
+    }
 
     const EXAMPLE: &str = "
 2413432311323
