@@ -69,11 +69,61 @@ This path never moves more than three consecutive blocks in the same direction a
 Directing the crucible from the lava pool to the machine parts factory, but not moving more than three
 consecutive blocks in the same direction, what is the least heat loss it can incur?
 
+--- Part Two ---
+
+The crucibles of lava simply aren't large enough to provide an adequate supply of lava to the machine parts
+factory. Instead, the Elves are going to upgrade to ultra crucibles.
+
+Ultra crucibles are even more difficult to steer than normal crucibles. Not only do they have trouble going in a
+straight line, but they also have trouble turning!
+
+Once an ultra crucible starts moving in a direction, it needs to move a minimum of four blocks in that direction
+before it can turn (or even before it can stop at the end). However, it will eventually start to get wobbly: an ultra
+crucible can move a maximum of ten consecutive blocks without turning.
+
+In the above example, an ultra crucible could follow this path to minimize heat loss:
+
+2>>>>>>>>1323
+32154535v5623
+32552456v4254
+34465858v5452
+45466578v>>>>
+143859879845v
+445787698776v
+363787797965v
+465496798688v
+456467998645v
+122468686556v
+254654888773v
+432267465553v
+
+In the above example, an ultra crucible would incur the minimum possible heat loss of 94.
+
+Here's another example:
+
+111111111111
+999999999991
+999999999991
+999999999991
+999999999991
+
+Sadly, an ultra crucible would need to take an unfortunate path like this one:
+
+1>>>>>>>1111
+9999999v9991
+9999999v9991
+9999999v9991
+9999999v>>>>
+
+This route causes the ultra crucible to incur the minimum possible heat loss of 71.
+
+Directing the ultra crucible from the lava pool to the machine parts factory, what is the least heat loss it can
+incur?
  */
 
 #[cfg(test)]
 mod test {
-    use std::collections::{BinaryHeap, HashMap, HashSet};
+    use std::collections::BinaryHeap;
 
     use itertools::Itertools;
 
@@ -97,15 +147,24 @@ mod test {
         South,
         West,
     }
+    use Direction::*;
 
     impl Direction {
         fn opposite(&self) -> Self {
-            use Direction::*;
             match self {
                 North => South,
                 East => West,
                 South => North,
                 West => East,
+            }
+        }
+
+        fn index(&self) -> usize {
+            match self {
+                North => 0,
+                East => 1,
+                South => 2,
+                West => 3,
             }
         }
     }
@@ -130,19 +189,16 @@ mod test {
         }
     }
 
-    fn part_1(input: &str) -> usize {
-        use Direction::*;
+    fn solve<const MIN: usize, const MAX: usize>(input: &str) -> usize {
         let (tiles, rows, cols) = parse_grid(input);
         let mut open = BinaryHeap::<Node>::new();
-        let mut best_cost = HashMap::<(usize, Option<Direction>, usize), usize>::new();
+        let mut history = vec![(false, usize::MAX); tiles.len() * 4 * MAX];
         open.push(Node {
             pos: 0,
             dir: None,
             distance: 0,
             cost: 0,
         });
-        let mut closed: HashSet<(usize, Option<Direction>, usize)> = HashSet::new();
-        let mut answer = usize::MAX;
         while let Some(Node {
             pos,
             dir,
@@ -150,23 +206,29 @@ mod test {
             cost,
         }) = open.pop()
         {
-            let key = (pos, dir, distance);
-            closed.insert(key);
-            if pos == tiles.len() - 1 {
-                answer = usize::min(answer, cost);
-                continue;
-            }
+            match dir {
+                // Mark node as visited.
+                Some(d) => history[pos * 4 * MAX + d.index() * MAX + distance].0 = true,
+                None => {
+                    for d in 0..4 {
+                        history[pos * 4 * MAX + d * MAX + distance].0 = true;
+                    }
+                }
+            };
             open.extend([North, East, South, West].iter().filter_map(|&d| {
                 let (same_dir, opp_dir) = match dir {
                     Some(pdir) => (pdir == d, pdir.opposite() == d),
                     None => (true, false),
                 };
-                if (distance > 2 && same_dir)
-                    || opp_dir
-                    || (d == North && pos < cols)
-                    || (d == East && pos % cols == cols - 1)
-                    || (d == South && pos / cols == rows - 1)
-                    || (d == West && pos % cols == 0)
+                if (distance < MIN && !same_dir)
+                    || (distance > MAX - 1 && same_dir) // constraints
+                    || opp_dir // no backtracking.
+                    || match d { // don't go outside grid.
+                        North => pos < cols,
+                        East => pos % cols == cols - 1,
+                        South => pos / cols == rows - 1,
+                        West => pos % cols == 0,
+                    }
                 {
                     return None;
                 }
@@ -177,96 +239,35 @@ mod test {
                     West => pos - 1,
                 };
                 let ndist = 1 + if same_dir { distance } else { 0 };
-                let ndir = Some(d);
-                let nkey = (npos, ndir, ndist);
-                if closed.contains(&nkey) {
-                    return None;
-                }
+                let nkey = npos * (4 * MAX) + d.index() * MAX + ndist;
                 let ncost = cost + tiles[npos];
-                let found = best_cost.entry(nkey).or_insert(usize::MAX);
-                if *found <= ncost {
+                let (visited, prevcost) = history[nkey];
+                if visited || prevcost <= ncost {
                     return None;
                 }
-                *found = ncost;
+                history[nkey].1 = ncost;
                 Some(Node {
                     pos: npos,
-                    dir: ndir,
+                    dir: Some(d),
                     distance: ndist,
                     cost: ncost,
                 })
             }));
         }
-        return answer;
+        // Get min cost of last tile.
+        history[(tiles.len() - 1) * 4 * MAX..]
+            .iter()
+            .map(|(_visited, cost)| *cost)
+            .min()
+            .unwrap()
+    }
+
+    fn part_1(input: &str) -> usize {
+        solve::<0, 3>(input)
     }
 
     fn part_2(input: &str) -> usize {
-        use Direction::*;
-        let (tiles, rows, cols) = parse_grid(input);
-        let mut open = BinaryHeap::<Node>::new();
-        let mut best_cost = HashMap::<(usize, Option<Direction>, usize), usize>::new();
-        open.push(Node {
-            pos: 0,
-            dir: None,
-            distance: 0,
-            cost: 0,
-        });
-        let mut closed: HashSet<(usize, Option<Direction>, usize)> = HashSet::new();
-        let mut answer = usize::MAX;
-        while let Some(Node {
-            pos,
-            dir,
-            distance,
-            cost,
-        }) = open.pop()
-        {
-            let key = (pos, dir, distance);
-            closed.insert(key);
-            if pos == tiles.len() - 1 {
-                answer = usize::min(answer, cost);
-                continue;
-            }
-            open.extend([North, East, South, West].iter().filter_map(|&d| {
-                let (same_dir, opp_dir) = match dir {
-                    Some(pdir) => (pdir == d, pdir.opposite() == d),
-                    None => (true, false),
-                };
-                if (distance < 4 && !same_dir)
-                    || (distance > 9 && same_dir)
-                    || opp_dir
-                    || (d == North && pos < cols)
-                    || (d == East && pos % cols == cols - 1)
-                    || (d == South && pos / cols == rows - 1)
-                    || (d == West && pos % cols == 0)
-                {
-                    return None;
-                }
-                let npos = match d {
-                    North => pos - cols,
-                    East => pos + 1,
-                    South => pos + cols,
-                    West => pos - 1,
-                };
-                let ndist = 1 + if same_dir { distance } else { 0 };
-                let ndir = Some(d);
-                let nkey = (npos, ndir, ndist);
-                if closed.contains(&nkey) {
-                    return None;
-                }
-                let ncost = cost + tiles[npos];
-                let found = best_cost.entry(nkey).or_insert(usize::MAX);
-                if *found <= ncost {
-                    return None;
-                }
-                *found = ncost;
-                Some(Node {
-                    pos: npos,
-                    dir: ndir,
-                    distance: ndist,
-                    cost: ncost,
-                })
-            }));
-        }
-        return answer;
+        solve::<4, 10>(input)
     }
 
     #[test]
