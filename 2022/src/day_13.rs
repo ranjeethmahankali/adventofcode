@@ -169,6 +169,8 @@ Organize all of the packets into the correct order. What is the decoder key for 
 
 #[cfg(test)]
 mod test {
+    use std::cmp::Ordering::{self, *};
+
     use itertools::Itertools;
 
     #[derive(PartialEq, Eq, Debug)]
@@ -183,14 +185,56 @@ mod test {
         Packet(Packet),
     }
 
-    enum Compare {
-        Correct,
-        Wrong,
-        Continue,
+    impl PartialOrd for Packet {
+        fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+            return Some(self.cmp(other));
+        }
+    }
+
+    impl Ord for Packet {
+        fn cmp(&self, other: &Self) -> Ordering {
+            match (self, other) {
+                (Packet::Value(l), Packet::Value(r)) => l.cmp(&r),
+                (Packet::Value(_), Packet::List(r)) => {
+                    if r.is_empty() {
+                        Greater
+                    } else {
+                        match self.cmp(&r[0]) {
+                            Less => Less,
+                            Greater => Greater,
+                            Equal if r.len() > 1 => Less,
+                            _ => Equal,
+                        }
+                    }
+                }
+                (Packet::List(_), Packet::Value(_)) => match other.cmp(self) {
+                    Less => Greater,
+                    Greater => Less,
+                    Equal => Equal,
+                },
+                (Packet::List(l), Packet::List(r)) => {
+                    use itertools::EitherOrBoth::*;
+                    l.iter()
+                        .zip_longest(r.iter())
+                        .find_map(|pair| {
+                            match match pair {
+                                Both(l, r) => l.cmp(&r),
+                                Left(_) => Greater,
+                                Right(_) => Less,
+                            } {
+                                Less => Some(Less),
+                                Greater => Some(Greater),
+                                Equal => None,
+                            }
+                        })
+                        .unwrap_or(Equal)
+                }
+            }
+        }
     }
 
     impl Packet {
-        fn from_line(line: &str) -> Packet {
+        fn parse(line: &str) -> Packet {
             let mut tokens: Vec<Token> = Vec::new();
             let mut line = line.trim();
             const SEP: [char; 3] = ['[', ']', ','];
@@ -229,41 +273,6 @@ mod test {
                 None => panic!("Empty list of tokens"),
             }
         }
-
-        fn check(left: Packet, right: Packet) -> Compare {
-            use std::cmp::Ordering::*;
-            use Compare::*;
-            match (left, right) {
-                (Packet::Value(l), Packet::Value(r)) => match l.cmp(&r) {
-                    Less => Correct,
-                    Equal => Continue,
-                    Greater => Wrong,
-                },
-                (Packet::Value(l), Packet::List(r)) => {
-                    Packet::check(Packet::List(vec![Packet::Value(l)]), Packet::List(r))
-                }
-                (Packet::List(l), Packet::Value(r)) => {
-                    Packet::check(Packet::List(l), Packet::List(vec![Packet::Value(r)]))
-                }
-                (Packet::List(mut l), Packet::List(mut r)) => {
-                    use itertools::EitherOrBoth::*;
-                    l.drain(..)
-                        .zip_longest(r.drain(..))
-                        .find_map(|pair| {
-                            match match pair {
-                                Both(l, r) => Packet::check(l, r),
-                                Left(_) => Wrong,
-                                Right(_) => Correct,
-                            } {
-                                Correct => Some(Correct),
-                                Wrong => Some(Wrong),
-                                Continue => None,
-                            }
-                        })
-                        .unwrap_or(Continue)
-                }
-            }
-        }
     }
 
     fn part_1(input: &str) -> usize {
@@ -275,7 +284,7 @@ mod test {
                 if line.is_empty() {
                     return None;
                 } else {
-                    return Some(Packet::from_line(line));
+                    return Some(Packet::parse(line));
                 }
             })
             .fold(
@@ -284,10 +293,10 @@ mod test {
                     Some(prev) => (
                         index + 1,
                         total
-                            + match Packet::check(prev, current) {
-                                Compare::Correct => index,
-                                Compare::Wrong => 0,
-                                Compare::Continue => panic!("Indeterminate comparison"),
+                            + match prev.cmp(&current) {
+                                Less => index,
+                                Greater => 0,
+                                Equal => panic!("Indeterminate comparison"),
                             },
                         None,
                     ),
@@ -297,10 +306,44 @@ mod test {
             .1
     }
 
+    fn part_2(input: &str) -> usize {
+        let mut packets = input
+            .trim()
+            .lines()
+            .filter_map(|line| {
+                let line = line.trim();
+                if line.is_empty() {
+                    None
+                } else {
+                    Some(Packet::parse(line))
+                }
+            })
+            .collect_vec();
+        packets.push(Packet::parse("[[2]]"));
+        packets.push(Packet::parse("[[6]]"));
+        packets.sort();
+        (packets
+            .iter()
+            .position(|pt| *pt == Packet::parse("[[2]]"))
+            .unwrap()
+            + 1)
+            * (packets
+                .iter()
+                .position(|pt| *pt == Packet::parse("[[6]]"))
+                .unwrap()
+                + 1)
+    }
+
     #[test]
     fn t_part_1() {
         assert_eq!(part_1(EXAMPLE), 13);
         assert_eq!(part_1(INPUT), 6076);
+    }
+
+    #[test]
+    fn t_part_2() {
+        assert_eq!(part_2(EXAMPLE), 140);
+        assert_eq!(part_2(INPUT), 140);
     }
 
     const EXAMPLE: &str = "

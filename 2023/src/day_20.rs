@@ -388,8 +388,9 @@ mod test {
     }
 
     #[test]
-    fn t_part_2() {
-        // assert_eq!(part_2(INPUT), 0);
+    fn _t_part_2() {
+        assert!(false);
+        assert_eq!(part_2(INPUT), 0);
     }
 
     const EXAMPLE_1: &str = "
