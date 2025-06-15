@@ -16,3 +16,6 @@ Cargo.lock
 
 # Debugging
 launch.json
+
+# Emacs stuff
+.projectile-cache.*
