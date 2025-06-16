@@ -70,9 +70,8 @@ mod test {
             .filter_map(|caps| {
                 caps.iter()
                     .skip(1)
-                    .filter_map(|cap| {
-                        cap.map(|cap| cap.as_str().parse::<usize>().expect("Cannot parse integer"))
-                    })
+                    .flatten()
+                    .map(|cap| cap.as_str().parse::<usize>().expect("Cannot parse integer"))
                     .collect_tuple::<(usize, usize)>()
             })
             .map(|(a, b)| a * b)
@@ -85,36 +84,28 @@ mod test {
             .captures_iter(input)
             .fold((true, 0usize), |(enabled, total), caps| {
                 let mut caps = caps.iter();
-                match caps.next() {
-                    Some(Some(first)) => {
-                        let op = first.as_str();
-                        if op.starts_with("mul") {
-                            if enabled {
-                                match caps
-                                    .filter_map(|cap| {
-                                        cap.map(|cap| {
-                                            cap.as_str()
-                                                .parse::<usize>()
-                                                .expect("Cannot parse integer")
-                                        })
-                                    })
-                                    .collect_tuple::<(usize, usize)>()
-                                {
-                                    Some((a, b)) => (true, total + a * b),
-                                    None => (true, total),
-                                }
-                            } else {
-                                (false, total)
-                            }
-                        } else if op.starts_with("don't") {
-                            (false, total)
-                        } else if op.starts_with("do") {
-                            (true, total)
-                        } else {
-                            (enabled, total)
-                        }
-                    }
-                    _ => (enabled, total),
+                match caps
+                    .next()
+                    .and_then(|cap| cap.map(|cap| cap.as_str().split_once('('))) // Flatten the double nested options.
+                    .flatten()
+                {
+                    Some((op, _)) => match (op, enabled) {
+                        ("mul", true) => match caps
+                            .filter_map(|cap| {
+                                cap.map(|cap| {
+                                    cap.as_str().parse::<usize>().expect("Cannot parse integer")
+                                })
+                            })
+                            .collect_tuple::<(usize, usize)>()
+                        {
+                            Some((a, b)) => (true, total + a * b),
+                            None => (true, total),
+                        },
+                        ("mul", false) | ("don't", _) => (false, total),
+                        ("do", _) => (true, total),
+                        _ => (enabled, total),
+                    },
+                    None => (enabled, total),
                 }
             })
             .1
