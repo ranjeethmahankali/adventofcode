@@ -74,6 +74,8 @@ unsafe reports. How many reports are now safe?
 
 #[cfg(test)]
 mod test {
+    use itertools::Itertools;
+
     fn part_1(input: &str) -> usize {
         input
             .trim()
@@ -109,59 +111,38 @@ mod test {
         input
             .trim()
             .lines()
-            .flat_map(|line| {
-                let res = line
+            .filter(|line| {
+                let report = line
                     .split_whitespace()
                     .map(|word| word.parse::<isize>().expect("Cannot parse integer"))
-                    .try_fold(
-                        (false, 0isize, None, 0isize, None),
-                        |(fault, ppdiff, ppval, pdiff, pval), current| match pval {
-                            Some(prev) => {
-                                let curr_diff: isize = current - prev;
-                                let abs_diff: isize = curr_diff.abs();
-                                match (pdiff.signum(), curr_diff.signum()) {
-                                    (0, -1) | (0, 1) | (1, 1) | (-1, -1)
-                                        if abs_diff > 0 && abs_diff < 4 =>
-                                    {
-                                        Ok((fault, pdiff, pval, curr_diff, Some(current)))
-                                    }
-                                    _ if !fault => match ppval {
-                                        Some(prev) => {
-                                            let curr_diff: isize = current - prev;
-                                            let abs_diff = curr_diff.abs();
-                                            match (ppdiff.signum(), curr_diff.signum()) {
-                                                (0, -1) | (0, 1) | (1, 1) | (-1, -1)
-                                                    if abs_diff > 0 && abs_diff < 4 =>
-                                                {
-                                                    Ok((
-                                                        true,
-                                                        ppdiff,
-                                                        ppval,
-                                                        curr_diff,
-                                                        Some(current),
-                                                    ))
-                                                }
-                                                _ => Ok((true, ppdiff, ppval, pdiff, pval)),
+                    .collect_vec();
+                (0..report.len()).any(|iskip| {
+                    report
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, rep)| if i == iskip { None } else { Some(rep) })
+                        .try_fold(
+                            (0isize, None),
+                            |(pdiff, pval), &current| -> Result<(isize, Option<isize>), ()> {
+                                match pval {
+                                    Some(prev) => {
+                                        let curr_diff = current - prev;
+                                        let abs_diff = curr_diff.abs();
+                                        match (pdiff.signum(), curr_diff.signum()) {
+                                            (0, -1) | (0, 1) | (1, 1) | (-1, -1)
+                                                if abs_diff > 0 && abs_diff < 4 =>
+                                            {
+                                                Ok((curr_diff, Some(current)))
                                             }
+                                            _ => Err(()),
                                         }
-                                        None => Ok((true, 0, None, 0, Some(current))),
-                                    },
-                                    _ => Err(()),
+                                    }
+                                    None => Ok((0, Some(current))),
                                 }
-                            }
-                            None => Ok((false, 0, None, 0, Some(current))),
-                        },
-                    );
-                match res {
-                    Ok(res) => {
-                        println!("{} passed", line);
-                        Ok(res)
-                    }
-                    Err(_) => {
-                        println!("{} failed", line);
-                        Err(())
-                    }
-                }
+                            },
+                        )
+                        .is_ok()
+                })
             })
             .count()
     }
@@ -175,7 +156,7 @@ mod test {
     #[test]
     fn t_part_2() {
         assert_eq!(part_2(EXAMPLE), 4);
-        assert_eq!(part_2(INPUT), 483);
+        assert_eq!(part_2(INPUT), 528);
     }
 
     const EXAMPLE: &str = "
