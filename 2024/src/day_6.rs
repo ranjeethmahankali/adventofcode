@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod test {
+    use itertools::Itertools;
 
+    #[derive(Copy, Clone, Eq, PartialEq)]
     enum Square {
         Empty,
         Obstacle,
@@ -61,10 +63,10 @@ mod test {
             let (x, y) = (pos % cols, pos / cols);
             if x == 0 || y == 0 || x + 1 == cols || y + 1 == rows {
                 // Reached the boundary.
-                break;
+                break visited.iter().filter(|&&v| v).count();
             }
-            let sq = std::mem::replace(&mut grid[pos], Empty);
-            let next = match sq {
+            let dir = std::mem::replace(&mut grid[pos], Empty);
+            let next = match dir {
                 Empty | Obstacle => panic!("Unexpected"),
                 Up => pos - cols,
                 Down => pos + cols,
@@ -73,11 +75,11 @@ mod test {
             };
             match grid[next] {
                 Empty => {
-                    grid[next] = sq;
+                    grid[next] = dir;
                     pos = next;
                 }
                 Obstacle => {
-                    grid[pos] = match sq {
+                    grid[pos] = match dir {
                         Empty | Obstacle => panic!("Unexpected"),
                         Up => Right,
                         Down => Left,
@@ -88,7 +90,32 @@ mod test {
                 Up | Down | Left | Right => panic!("Unexpected"),
             }
         }
-        visited.iter().filter(|&&v| v).count()
+    }
+
+    fn part_2(input: &str) -> usize {
+        use Square::*;
+        let (mut grid, rows, cols) = parse(input);
+        assert_eq!(rows * cols, grid.len());
+        let mut visited = vec![Empty; grid.len()];
+        let mut pos = grid
+            .iter()
+            .position(|s| match s {
+                Empty | Obstacle => false,
+                Up | Down | Left | Right => true,
+            })
+            .expect("Cannot find the initial position");
+        let found_loop = loop {
+            let dir = std::mem::replace(&mut grid[pos], Empty);
+            if visited[pos] == dir {
+                // Found a loop.
+                break true;
+            }
+            visited[pos] = dir;
+            let (x, y) = (pos % cols, pos / cols);
+            if x == 0 || y == 0 || x + 1 == cols || y + 1 == rows {
+                break false;
+            }
+        };
     }
 
     #[test]
