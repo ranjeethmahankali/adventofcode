@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use std::collections::{BTreeMap, BTreeSet};
+    use std::collections::BTreeSet;
 
     use itertools::Itertools;
 
@@ -26,41 +26,36 @@ mod test {
 
     fn part_1(input: &str) -> usize {
         let (rules, pagestr) = parse(input);
-        let page_indices = {
-            let ruleset = BTreeSet::from_iter(rules.iter());
-            let mut allpages: Vec<usize> = ruleset.iter().flat_map(|(a, b)| [*a, *b]).collect();
-            allpages.sort();
-            allpages.dedup();
-            allpages.sort_by(|&a, &b| {
-                use std::cmp::Ordering;
-                if ruleset.contains(&(a, b)) {
-                    Ordering::Less
-                } else if ruleset.contains(&(b, a)) {
-                    Ordering::Greater
-                } else {
-                    Ordering::Equal
-                }
-            });
-            BTreeMap::from_iter(allpages.drain(..).enumerate().map(|(i, p)| (p, i)))
-        };
         pagestr.trim().lines().fold(0usize, |total, line| {
             let nums: Vec<usize> = line
                 .split(',')
                 .map(|nstr| nstr.parse::<usize>().expect("Cannot parse integer"))
                 .collect();
+            let numset = BTreeSet::<usize>::from_iter(nums.iter().cloned());
+            let sorted = {
+                let ruleset = BTreeSet::from_iter(
+                    rules
+                        .iter()
+                        .filter(|(a, b)| numset.contains(a) && numset.contains(b)),
+                );
+                let mut sorted = nums.clone();
+                sorted.sort_by(|&a, &b| {
+                    use std::cmp::Ordering;
+                    if ruleset.contains(&(a, b)) {
+                        Ordering::Less
+                    } else if ruleset.contains(&(b, a)) {
+                        Ordering::Greater
+                    } else {
+                        Ordering::Equal
+                    }
+                });
+                sorted
+            };
             assert!(nums.len() % 2 == 1); // Must be odd.
-            match nums
-                .iter()
-                .try_fold(None, |prev, num| match page_indices.get(&num) {
-                    Some(index) => match prev {
-                        Some(prev) if prev < index => Ok(Some(index)),
-                        Some(_) => Err(()),
-                        None => Ok(Some(index)),
-                    },
-                    None => Ok(prev),
-                }) {
-                Ok(_) => total + nums[(nums.len() - 1) / 2],
-                Err(_) => total,
+            if sorted == nums {
+                total + nums[(nums.len() - 1) / 2]
+            } else {
+                total
             }
         })
     }
@@ -68,7 +63,7 @@ mod test {
     #[test]
     fn t_part_1() {
         assert_eq!(part_1(EXAMPLE), 143);
-        // assert_eq!(part_1(INPUT), 143);
+        assert_eq!(part_1(INPUT), 5268);
     }
 
     const EXAMPLE: &str = "
