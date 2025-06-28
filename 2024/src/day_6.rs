@@ -92,11 +92,42 @@ mod test {
         }
     }
 
+    fn propagate_backwards(
+        grid: &[Square],
+        maybe_obstacle: &mut [bool],
+        rows: usize,
+        cols: usize,
+        mut pos: usize,
+    ) {
+        use Square::*;
+        let dir = grid[pos];
+        loop {
+            let (x, y) = (pos % cols, pos / cols);
+            if x == 0 || y == 0 || x + 1 == cols || y + 1 == rows || matches!(grid[pos], Obstacle) {
+                // Reached the boundary.
+                break;
+            }
+            let (obpos, next) = match dir {
+                Empty | Obstacle => panic!("Unexpected"),
+                Up => (pos - 1, pos + cols),
+                Down => (pos + 1, pos - cols),
+                Left => (pos + cols, pos + 1),
+                Right => (pos - cols, pos - 1),
+            };
+            maybe_obstacle[obpos] = match grid[obpos] {
+                Empty => true,
+                _ => false,
+            };
+            pos = next;
+        }
+    }
+
     fn part_2(input: &str) -> usize {
         use Square::*;
         let (mut grid, rows, cols) = parse(input);
         assert_eq!(rows * cols, grid.len());
-        let mut visited = vec![Empty; grid.len()];
+        let mut maybe_obstacles = vec![false; grid.len()];
+        let mut obstacles = vec![false; grid.len()];
         let mut pos = grid
             .iter()
             .position(|s| match s {
@@ -104,25 +135,55 @@ mod test {
                 Up | Down | Left | Right => true,
             })
             .expect("Cannot find the initial position");
-        let found_loop = loop {
-            let dir = std::mem::replace(&mut grid[pos], Empty);
-            if visited[pos] == dir {
-                // Found a loop.
-                break true;
-            }
-            visited[pos] = dir;
+        propagate_backwards(&grid, &mut maybe_obstacles, rows, cols, pos);
+        loop {
             let (x, y) = (pos % cols, pos / cols);
             if x == 0 || y == 0 || x + 1 == cols || y + 1 == rows {
-                break false;
+                // Reached the boundary.
+                break;
             }
-        };
-        todo!("Incomplete");
+            let dir = std::mem::replace(&mut grid[pos], Empty);
+            let next = match dir {
+                Empty | Obstacle => panic!("Unexpected"),
+                Up => pos - cols,
+                Down => pos + cols,
+                Left => pos - 1,
+                Right => pos + 1,
+            };
+            match grid[next] {
+                Empty => {
+                    grid[next] = dir;
+                    pos = next;
+                    if maybe_obstacles[next] {
+                        obstacles[next] = true;
+                    }
+                }
+                Obstacle => {
+                    grid[pos] = match dir {
+                        Empty | Obstacle => panic!("Unexpected"),
+                        Up => Right,
+                        Down => Left,
+                        Left => Up,
+                        Right => Down,
+                    };
+                    propagate_backwards(&grid, &mut maybe_obstacles, rows, cols, pos);
+                }
+                Up | Down | Left | Right => panic!("Unexpected"),
+            }
+        }
+        obstacles.iter().filter(|&&ob| ob).count()
     }
 
     #[test]
     fn t_part_1() {
         assert_eq!(part_1(EXAMPLE), 41);
         assert_eq!(part_1(INPUT), 4758);
+    }
+
+    #[test]
+    fn t_part_2() {
+        assert_eq!(part_2(EXAMPLE), 6);
+        assert_eq!(part_2(INPUT), 298);
     }
 
     const EXAMPLE: &str = "
