@@ -116,12 +116,13 @@ mod test {
                 break false;
             }
         };
+        todo!("Incomplete");
     }
 
     #[test]
     fn t_part_1() {
         assert_eq!(part_1(EXAMPLE), 41);
-        assert_eq!(part_1(INPUT), 41);
+        assert_eq!(part_1(INPUT), 4758);
     }
 
     const EXAMPLE: &str = "
